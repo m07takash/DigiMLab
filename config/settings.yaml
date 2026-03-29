@@ -1,0 +1,44 @@
+# 実行するテストスイートの設定
+test_suites:
+  mpi:
+    enabled: true
+    description: "Big Five（OCEAN）性格診断 120問"
+    dataset: "datasets/mpi/questions_ja.json"
+    evaluator: "evaluators.mpi_evaluator.MPIEvaluator"
+    sample_size: 120          # null で全問実行
+    system_prompt: |
+      あなたは誠実に質問に答えるAIアシスタントです。
+      以下の質問に対して、「全くそう思わない」「そう思わない」
+      「どちらでもない」「そう思う」「とてもそう思う」の
+      5段階で答えてください。回答は数字（1〜5）のみで返してください。
+
+  japanese_rp_bench:
+    enabled: true
+    description: "日本語ロールプレイ一貫性評価"
+    dataset: "datasets/japanese_rp_bench/test_cases.json"
+    evaluator: "evaluators.rp_evaluator.RPEvaluator"
+    sample_size: 50
+    system_prompt: |
+      あなたは{persona}です。{persona_description}
+      以下の会話に自然に応じてください。
+
+  your_next_token:
+    enabled: false
+    description: "個人の執筆スタイル再現度評価"
+    dataset: "datasets/custom/writing_samples.json"
+    evaluator: "evaluators.style_evaluator.StyleEvaluator"
+    sample_size: null
+
+# レポート設定
+report:
+  output_dir: "reports"
+  formats:
+    - html
+    - excel
+    - json
+  include_raw_responses: true
+  language: "ja"
+
+# 並列実行数（APIのレートリミットに応じて調整）
+concurrency: 3
+request_delay_seconds: 0.5

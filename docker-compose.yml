@@ -1,0 +1,31 @@
+networks:
+  digiml-net:
+    driver: bridge
+
+volumes:
+  eval-datasets:
+  eval-reports:
+
+services:
+  eval-runner:
+    build: .
+    container_name: digiml-runner
+    networks:
+      - digiml-net
+    volumes:
+      - ./config:/app/config:ro
+      - ./datasets:/app/datasets
+      - ./reports:/app/reports
+      - ./system.env:/app/system.env:ro   # system.env をコンテナへマウント
+      - eval-datasets:/app/datasets/cache
+    ports:
+      - "8080:8080"
+    command: python main.py serve
+
+  # ---- 必要に応じてテスト対象AIを追加 ----
+  # ai-model-a:
+  #   image: your-model-image
+  #   networks:
+  #     - digiml-net
+  #   ports:
+  #     - "8001:8001"
