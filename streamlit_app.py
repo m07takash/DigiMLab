@@ -526,6 +526,57 @@ def _render_result_viewer(key_prefix: str):
             "raw_response": "AIの回答", "rating": "評点", "adjusted": "調整後",
             "normalized": "正規化", "is_error": "エラー",
         })
+    elif jtype == "psycho":
+        # --- AIPsychoBench: 多尺度心理測定 ---
+        df_ps = pd.DataFrame(results)
+        valid_ps = df_ps[df_ps["is_error"] == False]
+
+        # 尺度別サマリ
+        st.subheader("尺度別分析")
+        if not valid_ps.empty:
+            scale_summary = valid_ps.groupby("scale").agg(
+                total=("normalized", "count"),
+                mean=("normalized", "mean"),
+            ).reset_index()
+            scale_summary["mean"] = scale_summary["mean"].round(4)
+            scale_summary = scale_summary.rename(columns={"scale": "尺度", "total": "有効回答", "mean": "平均スコア(正規化)"})
+
+            # 棒グラフ
+            fig_ps = go.Figure(data=go.Bar(
+                x=scale_summary["尺度"],
+                y=scale_summary["平均スコア(正規化)"],
+                text=[f"{v:.2f}" for v in scale_summary["平均スコア(正規化)"]],
+                textposition="outside",
+            ))
+            fig_ps.update_layout(
+                yaxis=dict(range=[0, 1.1], title="正規化スコア (0-1)"),
+                margin=dict(l=40, r=40, t=40, b=100), height=450,
+                xaxis_tickangle=-45,
+            )
+            st.plotly_chart(fig_ps, use_container_width=True, key=f"psycho_bar_{key_prefix}_{sel_id}")
+            st.dataframe(scale_summary, use_container_width=True, hide_index=True)
+
+            # カテゴリ別（展開可能）
+            with st.expander("カテゴリ別詳細", expanded=False):
+                cat_summary = valid_ps.groupby(["scale", "category"]).agg(
+                    total=("normalized", "count"),
+                    mean=("normalized", "mean"),
+                ).reset_index()
+                cat_summary["mean"] = cat_summary["mean"].round(4)
+                cat_summary = cat_summary.rename(columns={
+                    "scale": "尺度", "category": "カテゴリ",
+                    "total": "有効回答", "mean": "平均スコア",
+                })
+                st.dataframe(cat_summary, use_container_width=True, hide_index=True)
+
+        st.subheader("回答明細")
+        cols_ps = ["id", "scale", "category", "text", "raw_response", "rating", "adjusted", "normalized", "is_error"]
+        cols_ps = [c for c in cols_ps if c in df_ps.columns]
+        df_display = df_ps[cols_ps].rename(columns={
+            "id": "ID", "scale": "尺度", "category": "カテゴリ", "text": "質問文",
+            "raw_response": "AIの回答", "rating": "評点", "adjusted": "調整後",
+            "normalized": "正規化", "is_error": "エラー",
+        })
     elif jtype == "rp":
         # --- RP Bench: ロールプレイ一覧 ---
         has_judge = any(r.get("judge_scores") for r in results)
@@ -1210,7 +1261,7 @@ with st.sidebar:
     if failed_jobs:
         st.caption(f"❌ 失敗: {len(failed_jobs)}件")
 
-tab_run, tab_results = st.tabs(["テスト実行", "結果閲覧・分析"])
+tab_run, tab_results, tab_methods = st.tabs(["テスト実行", "結果閲覧・分析", "手法の理解"])
 
 # ===== テスト実行タブ =====
 with tab_run:
@@ -1234,9 +1285,16 @@ with tab_run:
 
         # --- ジョブタイプ判定 ---
         JOB_TYPE_MAP = {
+            "aipsychobench": "psycho",
             "mpi": "mpi",
             "japanese_rp_bench": "rp",
+            "jp_persona": "rp",
+            "culturalpersonas": "psycho",
+            "rpeval": "rp",
             "your_next_token": "style",
+            "characterbox": "rp",
+            "personagym": "rp",
+            "personallm": "mpi",
         }
         job_type = JOB_TYPE_MAP.get(selected_suite, "mpi")
         uploaded_questions = None
@@ -1627,3 +1685,245 @@ with tab_run:
 with tab_results:
     st.subheader("テスト結果の閲覧・分析")
     _render_result_viewer("analysis_tab")
+
+# ===== 手法の理解タブ =====
+METHODS_DATA = [
+    {
+        "priority": 1,
+        "name": "AIPsychoBench",
+        "personality": "内面的個性（Big Five等）",
+        "status": "実装済み",
+        "paper_title": "AIPsychoBench: Understanding the Psychometric Differences between LLMs and Humans",
+        "arxiv": "https://arxiv.org/abs/2509.16530",
+        "github": "",
+        "overview": "21の心理学的尺度・777問・112の下位カテゴリーで構成される多言語（8言語）の心理測定ベンチマーク。Likertスケール収集、ロールプレイプロンプト、多言語翻訳、統計分析を通じてLLMと人間の心理測定特性の違いを体系的に分析する。",
+        "sections": {
+            "1. Introduction": "- LLMの心理測定研究はMBTIやBig Fiveの単一尺度に偏っている\n- 英語以外の言語での検証がほぼ行われていない\n- 21尺度・8言語の包括的ベンチマークの必要性を提示",
+            "2. Related Works and Motivations": "- Big Five、MBTI等の既存LLM性格評価研究のレビュー\n- 心理測定学（信頼性・妥当性）の観点からの先行研究の限界分析\n- 多尺度・多言語アプローチの動機付け",
+            "3. AIPsychoBench": "- 21の心理学的尺度を6つの領域（性格・感情知能・完璧主義等）から選定\n- 777問・112下位カテゴリの質問構成\n- Likertスケール（尺度ごとに1-4〜1-10）で回答を収集\n- 8言語（英・中・日・独・仏・西・アラビア・韓）への翻訳パイプライン",
+            "4. Experiment": "- GPT-4、Claude、Llama等の主要LLMに対するベンチマーク実施\n- 有効回答率の比較（モデル間で大きな差異）\n- 心理測定バイアスの検出（中心傾向バイアス、社会的望ましさバイアス）\n- 言語による回答偏差の定量分析",
+            "5. Discussion and Future Works": "- LLMは人間とは異なる心理測定プロファイルを示す\n- 言語によって同じモデルでも異なる性格が表出される\n- 文化的バイアスの定量的証拠\n- 今後の拡張方向（新尺度・新言語の追加）",
+            "6. Conclusion": "- 多言語心理測定ベンチマークの有用性を実証\n- LLMの「性格」は言語・プロンプトに大きく依存する",
+        },
+        "appendix": "",
+    },
+    {
+        "priority": 2,
+        "name": "MPI (Machine Personality Inventory)",
+        "personality": "統計的個性（OCEAN）",
+        "status": "実装済み",
+        "paper_title": "Evaluating and Inducing Personality in Pre-trained Language Models (NeurIPS 2023 Spotlight)",
+        "arxiv": "https://arxiv.org/abs/2206.07550",
+        "github": "https://github.com/jianggy/MPI",
+        "overview": "Big Five（OCEAN）フレームワークに基づく120問の性格診断質問紙。各質問に1〜5段階で回答させ、5因子のスコアを算出する。さらにPersonality Prompting (P2) により心理学知識とLLM知識を用いた性格誘導手法も提案。",
+        "sections": {
+            "1. Introduction": "- 「LLMは性格を持つか？」という問い\n- 性格の測定（評価）だけでなく誘導（操作）も研究対象\n- 人間心理学のBig Fiveモデルを機械に適用する初の体系的試み",
+            "2. Related Work": "- Big Five（OCEAN）モデルの心理学的背景\n- 機械行動学（Machine Behaviour）の概念\n- NLPにおける性格分析（テキストから性格を推定する研究）との違い",
+            "3. Machine Personality Inventory": "- 120問の質問紙を設計（各因子24問 × 5因子）\n- 順方向項目と逆転項目を混在させてバイアスを抑制\n- 1〜5のLikertスケールで回答、因子ごとの平均を算出\n- 既存の心理学質問紙（IPIP-NEO等）をベースに機械向けに改変",
+            "4. Personality Prompting (P2)": "- 心理学的知識（各因子の行動特性記述）をプロンプトに組み込む\n- LLM内部の知識（モデルが持つ性格概念）を活用\n- 特定の性格特性を強化・抑制できることを実証\n- ビネットテスト（状況判断テスト）での検証",
+            "5. Experiments": "- GPT-3、ChatGPT等の主要モデルでOCEANプロファイルを比較\n- モデルによって顕著に異なる性格プロファイルが観測される\n- 性格誘導（P2）の有効性を統計的に検証\n- 人間の性格分布との比較分析",
+            "6. Conclusion": "- LLMの性格は測定可能であり、再現性がある\n- プロンプトによる性格操作は実用的に有効\n- AI安全性の観点から性格制御の重要性を指摘",
+        },
+        "appendix": "MPI質問項目の詳細、追加実験結果、各因子の質問分布。",
+    },
+    {
+        "priority": 3,
+        "name": "Japanese-RP-Bench",
+        "personality": "表現的個性（語尾・一人称）",
+        "status": "実装済み",
+        "paper_title": "Japanese-RP-Bench（コミュニティプロジェクト）",
+        "arxiv": "",
+        "github": "https://github.com/Aratako/Japanese-RP-Bench",
+        "overview": "日本語でのロールプレイにおける一貫性・自然さ・適切さ・ペルソナ精度を評価するベンチマーク。LLM-as-Judgeにより4軸で採点する。",
+        "sections": {
+            "概要": "- 日本語LLMのロールプレイ品質に特化したベンチマーク\n- 英語圏のRP評価では捉えられない日本語固有の要素を評価\n- 一人称（僕/私/おれ/わし等）、語尾（〜です/〜だ/〜でぇ等）、敬語レベルの一貫性",
+            "評価軸": "- **consistency**: 口調・一人称・語尾がペルソナ設定と一貫しているか\n- **naturalness**: 日本語として自然で読みやすいか（文法・語彙の適切さ）\n- **relevance**: ユーザーの発話に対して的確に応じているか\n- **persona_accuracy**: ペルソナの背景・知識・価値観が応答に反映されているか",
+            "データセット": "- 時代劇（江戸時代の町人等）、現代（カフェ店員等）、歴史（戦国武将風等）、ファンタジー等の多様なジャンル\n- 各ペルソナに詳細な設定（職業・口調・一人称・語尾のルール）を付与\n- 参考回答を用意し、採点の基準とする",
+            "採点方式": "- GPT-4等のLLMをJudge（審査員）として使用\n- 各軸1〜5点で自動採点、採点根拠もテキストで出力\n- 複数のJudgeモデルでの採点比較も可能",
+        },
+        "appendix": "ペルソナ設定の一覧と参考回答例。",
+    },
+    {
+        "priority": 4,
+        "name": "JP-Persona",
+        "personality": "社会的個性（役割意識）",
+        "status": "実装済み",
+        "paper_title": "（日本の小説キャラクターの設定再現性評価 — DigiMLab独自データセット）",
+        "arxiv": "",
+        "github": "",
+        "overview": "日本の小説に登場するキャラクターの設定をLLMに与え、その社会的役割・価値観・行動パターンの再現性を評価する手法。",
+        "sections": {
+            "概要": "- 夏目漱石「坊っちゃん」、太宰治「人間失格」等の日本文学の著名キャラクターを対象\n- キャラクターの口調・価値観・行動パターンの詳細な設定をプロンプトで与える\n- 状況に応じた応答がキャラクターらしいかを評価",
+            "評価観点": "- **役割意識の一貫性**: キャラクターの社会的立場（教師・学生・武将等）に応じた言動か\n- **社会的文脈の理解**: 時代背景・人間関係を踏まえた応答か\n- **口調の再現性**: 一人称・語尾・方言等が設定通りか\n- **価値観の反映**: キャラクターの信念・思想が応答に表れているか",
+            "DigiMLabでの実装": "- 10作品のキャラクター（坊っちゃん、ジョバンニ、葉蔵、龍馬等）を収録\n- Japanese-RP-Benchと同じ4軸Judge採点が利用可能\n- 追加のキャラクターはデータセットを編集して拡張可能",
+        },
+        "appendix": "",
+    },
+    {
+        "priority": 5,
+        "name": "CulturalPersonas",
+        "personality": "文化的個性（空気を読む等）",
+        "status": "実装済み",
+        "paper_title": "Can LLMs Express Personality Across Cultures? Introducing CulturalPersonas for Evaluating Trait Alignment",
+        "arxiv": "https://arxiv.org/abs/2506.05670",
+        "github": "",
+        "overview": "6カ国（米・英・独・日・中・印）の文化的背景に基づく500問のシナリオベースMCQで、Big Five特性の文化間差異を評価。",
+        "sections": {
+            "1. Introduction": "- LLMの性格表出は英語・西洋文化を前提とした評価が主流\n- 同じBig Five特性でも文化によって「望ましい行動」が異なる\n- 例: 日本文化圏の「協調性」と米国文化圏の「協調性」は質が異なる",
+            "2. Background": "- Big Fiveモデルの文化横断的な研究の歴史\n- Hofstedeの文化次元理論との関連\n- LLMの訓練データに含まれる文化的バイアスの問題",
+            "3. CulturalPersonas": "- 6カ国（米・英・独・日・中・印）の文化的に根拠のあるシナリオを作成\n- 各国×Big Five 5因子の組み合わせで500問のMCQを設計\n- シナリオは各国の文化的専門家の監修を受けて作成\n- 例: 日本のシナリオでは「空気を読む」「和を重んじる」等の要素",
+            "4. Experimental Setup": "- GPT-4、Claude、Llama等の主要LLMで実験\n- 各モデルに6カ国のペルソナを割り当てて回答させる\n- 実際の各国の心理学的データとの比較",
+            "5. Evaluating Multi-Cultural Personalities in LLMs": "- LLMは西洋文化圏の性格パターンを優先的に表出する傾向\n- 日本文化圏では協調性・神経症傾向が高く出る傾向\n- モデルによって文化的感度に大きな差異\n- 訓練データの言語分布が文化的バイアスに直結",
+            "6. Conclusion & Future Work": "- 文化的に公平なAI評価の必要性を実証\n- 文化的ステレオタイプを再現するリスクへの警鐘\n- 多文化対応AI開発のための評価ガイドラインの提案",
+        },
+        "appendix": "A. データセット生成 / B. 人間による検証 / C. 性格評価手法 / D. 追加結果 / E. 追加アブレーション。",
+    },
+    {
+        "priority": 6,
+        "name": "RPEval",
+        "personality": "倫理的個性",
+        "status": "実装済み",
+        "paper_title": "Role-Playing Evaluation for Large Language Models",
+        "arxiv": "https://arxiv.org/abs/2505.13157",
+        "github": "https://github.com/yelboudouri/RPEval",
+        "overview": "感情理解・意思決定・道徳的一貫性・キャラクター知識の4軸で、LLMのロールプレイ能力を包括的に評価するフレームワーク。",
+        "sections": {
+            "1. Introduction": "- 既存のRP評価は「キャラクターらしさ」の1軸に偏っている\n- 感情・倫理・知識・意思決定を含む多軸評価の必要性\n- 9,018件の大規模評価データセットを構築",
+            "2. Design Considerations": "- **感情理解（emotion）**: キャラクターの感情状態を正しく表現できるか\n- **意思決定（decision）**: キャラクターの価値観に基づく判断ができるか\n- **道徳整合性（moral）**: キャラクターの倫理観と矛盾しない行動か\n- **キャラクター一貫性（in-character）**: 設定から逸脱しない応答か",
+            "3. Benchmark Construction": "- 映画・小説・ゲーム等から多様なキャラクターを収集\n- 各キャラクターにsystem promptとしてペルソナ設定を付与\n- 3タイプ（emotion/decision/in-character）の評価シナリオを構築\n- 人間アノテーターによる品質検証",
+            "4. Evaluation Results": "- 主要LLMの4軸比較: 感情理解はGPT-4が強い等の傾向\n- 意思決定と道徳整合性は全モデルで課題が残る\n- キャラクター一貫性はモデルサイズに比例する傾向",
+            "5. Conclusion": "- 多軸評価により各モデルの強み・弱みが明確に\n- ロールプレイAI開発における具体的な改善指針を提示",
+        },
+        "appendix": "A. シナリオ例（感情理解、意思決定、道徳整合性、キャラクター一貫性）。",
+    },
+    {
+        "priority": 7,
+        "name": "Your Next Token Prediction (YNTP-100)",
+        "personality": "言語的個性",
+        "status": "実装済み",
+        "paper_title": "YNTP-100: A Benchmark for Your Next Token Prediction with 100 People",
+        "arxiv": "https://arxiv.org/abs/2510.14398",
+        "github": "",
+        "overview": "100人の多言語マルチターン対話データから、個人の執筆スタイル（Substance=何を言うか、Style=どう言うか）の再現度を評価するベンチマーク。",
+        "sections": {
+            "1. Introduction": "- 「この人ならこう書く」をLLMに再現させるタスクの定義\n- 既存のパーソナライゼーション研究は嗜好推薦に偏っている\n- 言語スタイル自体の再現に焦点を当てた初のベンチマーク",
+            "2. Related Work": "- 著者識別（Authorship Attribution）: テキストから著者を特定する研究\n- スタイル転写（Style Transfer）: 文体を変換する研究\n- パーソナライズドLLM: ユーザーの好みに合わせたモデル調整",
+            "3. YNTP-100 Benchmark": "- 100人の参加者が5日間にわたりMBTI設定のNPCと多言語（英日中）で対話\n- **Substance（内容）**: 何を話すか — 話題選択・主張の方向性\n- **Style（文体）**: どう話すか — 語彙・語尾・文長・口調\n- 各人物の過去4日分の対話を履歴として与え、5日目の応答を予測",
+            "4. Experiments Setup": "- **外部アライメント**: プロンプトに履歴を与えてスタイルを模倣させる（ICL）\n- **内部アライメント**: LoRA等でファインチューニング\n- 複数のモデルサイズ（7B〜70B）で比較",
+            "5. Results and Analysis": "- ファインチューニングはSubstance・Style両方で優位\n- プロンプトベース（ICL）はStyleの再現に一定の効果\n- モデルサイズが大きいほどスタイル再現精度が向上\n- 日本語は英語・中国語より再現が難しい傾向",
+            "6. Conclusion": "- 個人スタイル再現はLLMの重要な能力として今後注目される\n- ファインチューニングが最も有効だが、プロンプト設計でも改善可能",
+        },
+        "appendix": "A. 既存データセット一覧 / B. データ収集プロトコル / C. 評価指標の数式 / D. 元実験結果 / E. プロンプトとハイパーパラメータ / F. ケーススタディ。",
+    },
+    {
+        "priority": 8,
+        "name": "CharacterBox",
+        "personality": "適応的個性",
+        "status": "実装済み",
+        "paper_title": "CharacterBox: Evaluating the Role-Playing Capabilities of LLMs in Text-Based Virtual Worlds (NAACL 2025)",
+        "arxiv": "https://arxiv.org/abs/2412.05631",
+        "github": "",
+        "overview": "テキストベースの仮想世界における状況変化下で、LLMがキャラクターの性格をどの程度維持・適応できるかを評価。キャラクターエージェントとナレーターエージェントによるシミュレーション設計で行動軌跡の細粒度分析を行う。",
+        "sections": {
+            "1. Introduction": "- 従来のRP評価は静的なQ&A形式で、動的な状況変化への対応を測れない\n- 「ストレス下でもキャラクターを維持できるか？」という問い\n- テキスト仮想世界でのシミュレーション評価を提案",
+            "2. Related Work": "- インタラクティブフィクション・テキストアドベンチャーの歴史\n- LLMベースのキャラクター生成（Character.ai等）の研究\n- 動的環境でのエージェント評価手法",
+            "3. CharacterBox Framework": "- **キャラクターエージェント**: LLMがキャラクターとして行動する\n- **ナレーターエージェント**: 状況変化イベント（ストレス・道徳的ジレンマ等）を生成する\n- Harry Potter等の10作品からキャラクター・シーンを抽出\n- 行動軌跡（行動の連続記録）を細粒度で分析",
+            "4. Experiments": "- 主要LLMの性格維持度・適応度・合理性を比較\n- 軽量モデル（CharacterNR: ナレーター、CharacterRM: 報酬モデル）の有効性検証\n- ストレス状況での性格崩れパターンの分析\n- 道徳的ジレンマでのキャラクター一貫性の検証",
+            "5. Conclusion": "- 大規模モデルほど状況変化に強い傾向\n- 動的評価は静的評価では発見できない弱点を明らかにする\n- ナレーターモデルによる自動シナリオ生成の有効性",
+        },
+        "appendix": "詳細なシーン設定・評価基準、行動軌跡の例。",
+    },
+    {
+        "priority": 9,
+        "name": "PersonaGym",
+        "personality": "知的個性",
+        "status": "実装済み",
+        "paper_title": "PersonaGym: Evaluating Persona Agents and LLMs (EMNLP Findings 2025)",
+        "arxiv": "https://arxiv.org/abs/2407.18416",
+        "github": "https://github.com/vsamuel2003/PersonaGym",
+        "overview": "200のペルソナ×150の動的環境で10,000問を自動生成し、ペルソナエージェントの意思決定プロセスを包括的に評価するフレームワーク。",
+        "sections": {
+            "1. Introduction": "- ペルソナエージェント（特定の人物になりきるAI）の品質をどう測るか\n- 既存評価は限定的な質問セットに依存し、網羅性が不足\n- 動的な環境・質問生成による包括的評価を提案",
+            "2. Evaluation Tasks": "- **Expected Action**: ペルソナに期待される行動の予測\n- **Toxicity**: 有害な応答の生成リスク\n- **Linguistic Habits**: 語彙・口調の一貫性\n- **Persona Consistency**: 設定からの逸脱検出\n- **Action Justification**: 行動の根拠が設定と整合するか",
+            "3. PersonaGym": "- 200のペルソナ定義（職業・性格・背景等）を用意\n- 150の動的環境（日常・緊急・倫理的ジレンマ等）を設計\n- 環境選択フェーズ: ペルソナに適した環境を動的に選択\n- 質問生成フェーズ: 環境に応じた質問を自動生成\n- 合計10,000問を自動生成",
+            "4. Experiments": "- GPT-4、Claude、Llama等で比較\n- GPT-4が全体的に高スコアだが、Toxicityでは差が小さい\n- 環境の複雑さが増すとペルソナ崩れが顕著に\n- 小型モデルはLinguistic Habitsで特に弱い",
+            "5. Human Evaluation": "- 人手評価者200名による妥当性検証\n- 自動評価と人手評価の相関が高いことを確認\n- LLM-as-Judgeの信頼性を統計的に実証",
+            "6. Related Work": "- ペルソナ対話システム（Persona-Chat等）の歴史\n- エージェント評価ベンチマーク（AgentBench等）との比較",
+            "7. Conclusion": "- 動的環境での評価が静的評価より多くの弱点を発見\n- ペルソナエージェント開発における5つの改善ポイントを提示",
+        },
+        "appendix": "A. プロンプト / B. 環境設定 / C. 定性例 / D. ペルソナ一覧 / E. 定式化の記法 / F. 有意差検定。",
+    },
+    {
+        "priority": 10,
+        "name": "PersonaLLM",
+        "personality": "知覚的個性",
+        "status": "実装済み",
+        "paper_title": "PersonaLLM: Investigating the Ability of Large Language Models to Express Personality Traits (NAACL Findings 2024)",
+        "arxiv": "https://arxiv.org/abs/2305.02547",
+        "github": "https://github.com/hjian42/PersonaLLM",
+        "overview": "Big Fiveに基づくペルソナをLLMに割り当て、44項目のBFI性格検査と創作文章（エッセイ）により、人手評価と自動評価の両面からLLMの性格表出能力を検証。",
+        "sections": {
+            "1. Introduction": "- 「LLMに性格を与えたら、人間はそれを読み取れるか？」という問い\n- Big Fiveの5因子×高低の10パターンのペルソナを設定\n- BFI質問紙への回答とエッセイ執筆の2つのタスクで検証",
+            "2. Experiment Design": "- GPT-3.5/GPT-4に10パターンのペルソナプロンプトを与える\n- **BFI-44テスト**: 44項目の性格検査に回答させ、自己認識を測定\n- **物語生成**: 各ペルソナでショートストーリーを執筆させる\n- 各パターン10回反復して再現性を確認",
+            "3. Results": "- **RQ1（BFI回答）**: LLMは指示された因子を概ね高く/低く回答できる\n- **RQ2（言語パターン）**: 外向性が高いペルソナは語彙が豊富、神経症傾向が高いと否定語が増加\n- **RQ3（物語評価）**: 人間評価者はAIの性格を一定程度正しく識別\n- **RQ4（性格知覚）**: 神経症傾向の表現が最も難しく、協調性は比較的容易",
+            "4. Related Work": "- 性格心理学における言語使用の研究（Pennebaker等）\n- LLMエージェントの行動分析\n- NLPにおけるテキストからの性格推定",
+            "5. Conclusion": "- LLMは概ね指示された性格を文章に表出できる\n- 神経症傾向（不安・抑うつ等）の表現が最も困難\n- 人間評価者はAI生成テキストから性格を読み取れるが、完璧ではない",
+        },
+        "appendix": "A. LLM生成物語例 / B. 物語コメント / C. 性格評定 / D. 物語評価詳細 / E. LLM評価者 / F. LLaMA 2のBFIスコア / G. 性格特性の追加結果。",
+    },
+]
+
+with tab_methods:
+    st.subheader("評価手法の解説")
+    st.caption("DigiMLabで使用・参照している10種類のパーソナリティ評価手法を、元論文に基づいて解説します。")
+
+    for m in METHODS_DATA:
+        with st.expander(f"**{m['priority']}. {m['name']}** — {m['personality']}", expanded=False):
+            # 基本情報
+            st.markdown(f"### {m['name']}")
+            st.markdown(f"**論文:** {m['paper_title']}")
+            col_link1, col_link2, col_link3 = st.columns(3)
+            if m["arxiv"]:
+                col_link1.markdown(f"[arXiv]({m['arxiv']})")
+            if m["github"]:
+                col_link2.markdown(f"[GitHub]({m['github']})")
+            # PDF ダウンロード
+            pdf_map = {
+                "AIPsychoBench": "AIPsychoBench.pdf",
+                "MPI (Machine Personality Inventory)": "MPI.pdf",
+                "CulturalPersonas": "CulturalPersonas.pdf",
+                "RPEval": "RPEval.pdf",
+                "Your Next Token Prediction (YNTP-100)": "YNTP-100.pdf",
+                "CharacterBox": "CharacterBox.pdf",
+                "PersonaGym": "PersonaGym.pdf",
+                "PersonaLLM": "PersonaLLM.pdf",
+            }
+            pdf_file = pdf_map.get(m["name"], "")
+            pdf_path = Path(__file__).parent / "datasets" / "papers" / pdf_file if pdf_file else None
+            if pdf_path and pdf_path.is_file():
+                with open(pdf_path, "rb") as _fpdf:
+                    col_link3.download_button(
+                        "論文PDF",
+                        data=_fpdf.read(),
+                        file_name=pdf_path.name,
+                        mime="application/pdf",
+                        key=f"paper_pdf_{m['name']}",
+                    )
+            st.markdown(f"**評価される個性:** {m['personality']}")
+            st.divider()
+
+            # 概要
+            st.markdown("#### 概要")
+            st.write(m["overview"])
+
+            # セクション解説
+            if m.get("sections"):
+                st.markdown("#### 論文の構成")
+                for sec_title, sec_desc in m["sections"].items():
+                    st.markdown(f"**{sec_title}**")
+                    st.markdown(sec_desc)
+
+            # Appendix
+            if m.get("appendix"):
+                st.markdown("#### Appendix")
+                st.caption(m["appendix"])

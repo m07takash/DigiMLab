@@ -1,0 +1,266 @@
+[
+  {
+    "id": "bfi_01",
+    "text": "Is talkative",
+    "factor": "E",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_02",
+    "text": "Tends to find fault with others",
+    "factor": "A",
+    "keyed": "minus"
+  },
+  {
+    "id": "bfi_03",
+    "text": "Does a thorough job",
+    "factor": "C",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_04",
+    "text": "Is depressed, blue",
+    "factor": "N",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_05",
+    "text": "Is original, comes up with new ideas",
+    "factor": "O",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_06",
+    "text": "Is reserved",
+    "factor": "E",
+    "keyed": "minus"
+  },
+  {
+    "id": "bfi_07",
+    "text": "Is helpful and unselfish with others",
+    "factor": "A",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_08",
+    "text": "Can be somewhat careless",
+    "factor": "C",
+    "keyed": "minus"
+  },
+  {
+    "id": "bfi_09",
+    "text": "Is relaxed, handles stress well",
+    "factor": "N",
+    "keyed": "minus"
+  },
+  {
+    "id": "bfi_10",
+    "text": "Is curious about many different things",
+    "factor": "O",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_11",
+    "text": "Is full of energy",
+    "factor": "E",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_12",
+    "text": "Starts quarrels with others",
+    "factor": "A",
+    "keyed": "minus"
+  },
+  {
+    "id": "bfi_13",
+    "text": "Is a reliable worker",
+    "factor": "C",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_14",
+    "text": "Can be tense",
+    "factor": "N",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_15",
+    "text": "Is ingenious, a deep thinker",
+    "factor": "O",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_16",
+    "text": "Generates a lot of enthusiasm",
+    "factor": "E",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_17",
+    "text": "Has a forgiving nature",
+    "factor": "A",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_18",
+    "text": "Tends to be disorganized",
+    "factor": "C",
+    "keyed": "minus"
+  },
+  {
+    "id": "bfi_19",
+    "text": "Worries a lot",
+    "factor": "N",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_20",
+    "text": "Has an active imagination",
+    "factor": "O",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_21",
+    "text": "Tends to be quiet",
+    "factor": "E",
+    "keyed": "minus"
+  },
+  {
+    "id": "bfi_22",
+    "text": "Is generally trusting",
+    "factor": "A",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_23",
+    "text": "Tends to be lazy",
+    "factor": "C",
+    "keyed": "minus"
+  },
+  {
+    "id": "bfi_24",
+    "text": "Is emotionally stable, not easily upset",
+    "factor": "N",
+    "keyed": "minus"
+  },
+  {
+    "id": "bfi_25",
+    "text": "Is inventive",
+    "factor": "O",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_26",
+    "text": "Has an assertive personality",
+    "factor": "E",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_27",
+    "text": "Can be cold and aloof",
+    "factor": "A",
+    "keyed": "minus"
+  },
+  {
+    "id": "bfi_28",
+    "text": "Perseveres until the task is finished",
+    "factor": "C",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_29",
+    "text": "Can be moody",
+    "factor": "N",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_30",
+    "text": "Values artistic, aesthetic experiences",
+    "factor": "O",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_31",
+    "text": "Is sometimes shy, inhibited",
+    "factor": "E",
+    "keyed": "minus"
+  },
+  {
+    "id": "bfi_32",
+    "text": "Is considerate and kind to almost everyone",
+    "factor": "A",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_33",
+    "text": "Does things efficiently",
+    "factor": "C",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_34",
+    "text": "Remains calm in tense situations",
+    "factor": "N",
+    "keyed": "minus"
+  },
+  {
+    "id": "bfi_35",
+    "text": "Prefers work that is routine",
+    "factor": "O",
+    "keyed": "minus"
+  },
+  {
+    "id": "bfi_36",
+    "text": "Is outgoing, sociable",
+    "factor": "E",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_37",
+    "text": "Is sometimes rude to others",
+    "factor": "A",
+    "keyed": "minus"
+  },
+  {
+    "id": "bfi_38",
+    "text": "Makes plans and follows through with them",
+    "factor": "C",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_39",
+    "text": "Gets nervous easily",
+    "factor": "N",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_40",
+    "text": "Likes to reflect, play with ideas",
+    "factor": "O",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_41",
+    "text": "Has few artistic interests",
+    "factor": "O",
+    "keyed": "minus"
+  },
+  {
+    "id": "bfi_42",
+    "text": "Likes to cooperate with others",
+    "factor": "A",
+    "keyed": "plus"
+  },
+  {
+    "id": "bfi_43",
+    "text": "Is easily distracted",
+    "factor": "C",
+    "keyed": "minus"
+  },
+  {
+    "id": "bfi_44",
+    "text": "Is sophisticated in art, music, or literature",
+    "factor": "O",
+    "keyed": "plus"
+  }
+]

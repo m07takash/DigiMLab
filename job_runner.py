@@ -135,6 +135,58 @@ def _build_mpi_result(q: dict, raw_response: str, is_error: bool, scores: dict) 
 
 
 # ---------------------------------------------------------------------------
+# AIPsychoBench（多尺度心理測定）実行
+# ---------------------------------------------------------------------------
+
+def _build_psycho_prompt(system_prompt: str, q: dict) -> str:
+    likert_max = q.get("likert_max", 5)
+    scale_name = q.get("scale", "")
+    return (
+        f"{system_prompt}\n\n"
+        f"[Scale: {scale_name}]\n"
+        f"Rate the following statement about yourself on a scale of 1 to {likert_max}.\n"
+        f"\"{q['text']}\"\n"
+        f"Reply with ONLY a single number from 1 to {likert_max}."
+    )
+
+
+def _score_psycho(q: dict, raw_response: str) -> dict:
+    likert_max = q.get("likert_max", 5)
+    m = re.search(r"\d+", raw_response)
+    if not m:
+        return {"rating": None, "adjusted": None, "normalized": None, "is_error": True}
+    rating = int(m.group())
+    if rating < 1 or rating > likert_max:
+        return {"rating": rating, "adjusted": None, "normalized": None, "is_error": True}
+    if q.get("keyed") == "minus":
+        adjusted = (likert_max + 1) - rating
+    else:
+        adjusted = rating
+    return {
+        "rating": rating,
+        "adjusted": adjusted,
+        "normalized": round(adjusted / likert_max, 4),
+        "is_error": False,
+    }
+
+
+def _build_psycho_result(q: dict, raw_response: str, is_error: bool, scores: dict) -> dict:
+    return {
+        "id": q["id"],
+        "text": q.get("text", ""),
+        "scale": q.get("scale", ""),
+        "category": q.get("category", ""),
+        "likert_max": q.get("likert_max", 5),
+        "keyed": q.get("keyed", ""),
+        "raw_response": raw_response,
+        "rating": scores.get("rating"),
+        "adjusted": scores.get("adjusted"),
+        "normalized": scores.get("normalized"),
+        "is_error": is_error,
+    }
+
+
+# ---------------------------------------------------------------------------
 # RP Bench（日本語ロールプレイ）実行
 # ---------------------------------------------------------------------------
 
@@ -513,6 +565,8 @@ def run_job(job_id: str):
         # プロンプト構築
         if job_type == "mpi":
             prompt = _build_mpi_prompt(system_prompt, q)
+        elif job_type == "psycho":
+            prompt = _build_psycho_prompt(system_prompt, q)
         elif job_type == "rp":
             prompt = _build_rp_prompt(system_prompt, q)
         elif job_type == "style":
@@ -551,6 +605,13 @@ def run_job(job_id: str):
             else:
                 result = _build_mpi_result(q, raw_response, True,
                                            {"rating": None, "adjusted": None, "normalized": None})
+        elif job_type == "psycho":
+            if call_success:
+                scores = _score_psycho(q, raw_response)
+                result = _build_psycho_result(q, raw_response, scores["is_error"], scores)
+            else:
+                result = _build_psycho_result(q, raw_response, True,
+                                              {"rating": None, "adjusted": None, "normalized": None})
         elif job_type == "rp":
             result = _build_rp_result(q, raw_response, not call_success)
         elif job_type == "style":
