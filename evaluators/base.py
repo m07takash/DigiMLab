@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
 import asyncio
+import random
 from runners.api_client import AIClient
 
 
@@ -48,22 +49,46 @@ class BaseEvaluator(ABC):
         """スコアリング。resultにscore/score_detailを設定して返す"""
         ...
 
+    def _sample_cases(
+        self,
+        cases: list[TestCase],
+        sample_size: int | None,
+        sampling_mode: str = "head",
+        random_seed: int | None = None,
+    ) -> list[TestCase]:
+        """sample_size に応じてテストケースを抽出する"""
+        if not sample_size or sample_size >= len(cases):
+            return cases
+
+        if sampling_mode == "random":
+            rng = random.Random(random_seed)
+            return rng.sample(cases, sample_size)
+        else:
+            # "head" — 先頭N件
+            return cases[:sample_size]
+
     async def run(
         self,
         client: AIClient,
         dataset_path: str,
         sample_size: int | None = None,
         concurrency: int = 3,
+        request_delay_seconds: float = 0.0,
+        sampling_mode: str = "head",
+        random_seed: int | None = None,
     ) -> EvalReport:
         cases = self.load_dataset(dataset_path)
-        if sample_size:
-            cases = cases[:sample_size]
+        cases = self._sample_cases(cases, sample_size, sampling_mode, random_seed)
 
         semaphore = asyncio.Semaphore(concurrency)
-        results = []
+        results: list[TestResult] = []
 
-        async def run_one(case: TestCase) -> TestResult:
+        async def run_one(index: int, case: TestCase) -> TestResult:
             async with semaphore:
+                # リクエスト間隔を空ける（初回以外）
+                if request_delay_seconds > 0 and index > 0:
+                    await asyncio.sleep(request_delay_seconds)
+
                 system_prompt = self.config.get("system_prompt", "")
                 messages = []
                 if system_prompt:
@@ -86,7 +111,7 @@ class BaseEvaluator(ABC):
                     )
                 return result
 
-        tasks = [run_one(c) for c in cases]
+        tasks = [run_one(i, c) for i, c in enumerate(cases)]
         results = await asyncio.gather(*tasks)
 
         summary = self.compute_summary(list(results))

@@ -1,0 +1,64 @@
+# models.yaml.example — このファイルはコミットしてOKです
+# セットアップ手順: cp models.yaml.example models.yaml && 値を編集
+#
+# テスト対象のAIモデルを設定します
+# typeは "openai_compatible"（FastAPI等） / "openai" / "anthropic" / "custom" を指定
+# visible: true/false — Web UIの選択肢に表示するかどうか
+models:
+  - id: my_model
+    name: "My AI Model"
+    type: custom                     # カスタムAPI（独自エンドポイント）
+    visible: true
+    base_url: "https://example.com/api/run"
+    default_params:
+      service_info:
+        SERVICE_ID: "DigiMLab"
+        SERVICE_DATA: {}
+      user_info:
+        USER_ID: "TestUser"
+        USER_DATA: {}
+      agent_file: "your_agent_file.json"
+      engine: ""
+      situation:
+        TIME: ""
+        SITUATION: ""
+      stream_mode: true
+      save_digest: false
+      memory_use: false
+      memory_save: false
+      magic_word_use: false
+      meta_search: true
+      rag_query_gene: true
+      web_search: false
+      web_search_engine: "OpenAI"
+
+  # パターン違いの例（同じAPIで別エージェント）
+  # - id: my_model_v2
+  #   name: "My AI Model v2"
+  #   type: custom
+  #   visible: true
+  #   base_url: "https://example.com/api/run"
+  #   default_params:
+  #     service_info:
+  #       SERVICE_ID: "DigiMLab"
+  #       SERVICE_DATA: {}
+  #     user_info:
+  #       USER_ID: "TestUser"
+  #       USER_DATA: {}
+  #     agent_file: "another_agent.json"
+  #     engine: "Gemini-2.5-Flash"
+  #     stream_mode: true
+  #     save_digest: false
+  #     memory_use: false
+  #     memory_save: false
+  #     magic_word_use: false
+  #     meta_search: true
+  #     rag_query_gene: true
+  #     web_search: false
+  #     web_search_engine: "OpenAI"
+
+# 評価（LLM-as-Judge）に使うモデル（RP Bench等で使用）
+judge:
+  type: openai
+  model: "${JUDGE_MODEL}"
+  api_key: "${OPENAI_API_KEY}"

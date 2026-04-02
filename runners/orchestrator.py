@@ -7,7 +7,7 @@ from pathlib import Path
 
 import env_loader  # system.env を自動ロード
 from env_loader import expand
-from runners.api_client import AIClient, ModelConfig
+from runners.api_client import AIClient, ModelConfig, RetryConfig
 from evaluators.base import BaseEvaluator, EvalReport
 from reporters.html_reporter import HTMLReporter
 
@@ -21,6 +21,18 @@ def _load_model_config(raw: dict) -> ModelConfig:
         model=raw.get("model", ""),
         api_key=expand(raw.get("api_key", "")),
         default_params=raw.get("default_params", {}),
+    )
+
+
+def _load_retry_config(settings: dict) -> RetryConfig:
+    retry_raw = settings.get("retry", {})
+    return RetryConfig(
+        max_retries=retry_raw.get("max_retries", 3),
+        initial_delay_seconds=retry_raw.get("initial_delay_seconds", 2.0),
+        backoff_factor=retry_raw.get("backoff_factor", 2.0),
+        retryable_status_codes=retry_raw.get(
+            "retryable_status_codes", [429, 500, 502, 503, 504]
+        ),
     )
 
 
@@ -38,6 +50,9 @@ class Orchestrator:
         with open(settings_path, encoding="utf-8") as f:
             self.settings = yaml.safe_load(f)
 
+    def _build_retry_config(self) -> RetryConfig:
+        return _load_retry_config(self.settings)
+
     def _build_judge(self) -> AIClient | None:
         judge_cfg = self.models_cfg.get("judge")
         if not judge_cfg:
@@ -49,11 +64,16 @@ class Orchestrator:
             model=expand(judge_cfg.get("model", "gpt-4o")),
             api_key=expand(judge_cfg.get("api_key", "")),
         )
-        return AIClient(cfg)
+        return AIClient(cfg, retry_config=self._build_retry_config())
 
     async def run_all(self, model_ids: list[str] | None = None) -> list[EvalReport]:
         judge = self._build_judge()
+        retry_config = self._build_retry_config()
         concurrency = self.settings.get("concurrency", 3)
+        request_delay = self.settings.get("request_delay_seconds", 0.0)
+        sampling_cfg = self.settings.get("sampling", {})
+        sampling_mode = sampling_cfg.get("mode", "head")
+        random_seed = sampling_cfg.get("random_seed")
         all_reports: list[EvalReport] = []
 
         models = self.models_cfg.get("models", [])
@@ -67,17 +87,24 @@ class Orchestrator:
 
         for model_raw in models:
             model_cfg = _load_model_config(model_raw)
-            client = AIClient(model_cfg)
+            client = AIClient(model_cfg, retry_config=retry_config)
             print(f"\n=== Model: {model_cfg.name} ===")
 
             for suite_name, suite_cfg in suites.items():
-                print(f"  Running: {suite_name}")
+                # テストセット単位でsession_idを生成（1セット＝1セッション）
+                run_ts = datetime.now().strftime("%Y%m%d%H%M%S")
+                client.session_id = f"DML{run_ts}{model_cfg.id}"
+                print(f"  Running: {suite_name} (session: {client.session_id})")
+
                 evaluator = _load_evaluator(suite_cfg["evaluator"], suite_cfg, judge)
                 report = await evaluator.run(
                     client=client,
                     dataset_path=suite_cfg["dataset"],
                     sample_size=suite_cfg.get("sample_size"),
                     concurrency=concurrency,
+                    request_delay_seconds=request_delay,
+                    sampling_mode=sampling_mode,
+                    random_seed=random_seed,
                 )
                 all_reports.append(report)
                 print(f"  Summary: {report.summary}")

@@ -1,3 +1,6 @@
+# settings.yaml.example — このファイルはコミットしてOKです
+# セットアップ手順: cp settings.yaml.example settings.yaml && 必要に応じて編集
+
 # 実行するテストスイートの設定
 test_suites:
   mpi:
@@ -42,3 +45,20 @@ report:
 # 並列実行数（APIのレートリミットに応じて調整）
 concurrency: 3
 request_delay_seconds: 0.5
+
+# リトライ設定（API側のレート制限・一時エラー対策）
+retry:
+  max_retries: 3               # 最大リトライ回数（これを超えたらエラーで落とす）
+  initial_delay_seconds: 2.0   # 初回リトライまでの待機秒数
+  backoff_factor: 2.0          # 待機時間の倍率（指数バックオフ）
+  retryable_status_codes:      # リトライ対象のHTTPステータスコード
+    - 429   # Too Many Requests
+    - 500   # Internal Server Error
+    - 502   # Bad Gateway
+    - 503   # Service Unavailable
+    - 504   # Gateway Timeout
+
+# サンプリング設定
+sampling:
+  mode: "head"                 # "head"=先頭N件, "random"=ランダムN件
+  random_seed: null            # ランダム時のシード（null=毎回異なる）

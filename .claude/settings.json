@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pkill -f \"streamlit run.*streamlit_app.py\")",
+      "Bash(sudo sed:*)",
+      "Bash(sudo cat:*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8795/test)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" -L http://localhost:8795/test/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" -L -k https://digitalmatsumoto.japaneast.cloudapp.azure.com/test/)",
+      "Bash(curl -s https://digitalmatsumoto.japaneast.cloudapp.azure.com/api/health)",
+      "Bash(curl -s https://digitalmatsumoto.japaneast.cloudapp.azure.com/api/agents)",
+      "Bash(curl -s https://digitalmatsumoto.japaneast.cloudapp.azure.com/api/agents/agent_30DigitalMATSU_API.json/engines)",
+      "Bash(curl -s https://digitalmatsumoto.japaneast.cloudapp.azure.com/api/web_search_engines)",
+      "Bash(curl -s https://digitalmatsumoto.japaneast.cloudapp.azure.com/api/agents/agent_01DigitalMATSUMOTO.json/engines)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8895)",
+      "Read(//home/digimatsuadmin/DigiMLab/**)"
+    ]
+  }
+}

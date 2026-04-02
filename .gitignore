@@ -5,6 +5,12 @@ system.env
 *.env
 !system.env.example
 
+# 設定ファイル（URL・キー等を含むためGit除外、exampleをテンプレートとして管理）
+config/models.yaml
+config/settings.yaml
+!config/models.yaml.example
+!config/settings.yaml.example
+
 # ========================================
 # 生成物・キャッシュ
 # ========================================
